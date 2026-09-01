@@ -18,7 +18,7 @@
 这些文档涉及的工作区内有以下独立 git 仓库，均已上传至 GitHub：
 
 - [ComplexityReduction](https://github.com/Archon4CR/ComplexityReduction) — Lean 4 计算复杂度归约库，提供 NPC 归约的形式化基础设施（EncodedDecisionProblem、CostedReduction、Karp21、Schaefer 等）
-- [Archon](https://github.com/Archon4CR/Archon) — Python 实现的自动定理证明框架，驱动 Lean 形式化证明的迭代工作流（blueprint -> formalize -> prove -> polish）
+- [Archon](https://github.com/Archon4CR/Archon/tree/codex/complexity-reduction-integration) — Python 实现的自动定理证明框架，驱动 Lean 形式化证明的迭代工作流（blueprint -> formalize -> prove -> polish）
 - [problems](https://github.com/Archon4CR/problems) — NP 完全性归约题库，从大学课程资料中提取并清洗的 64 道归约题
 - [reduction-test](https://github.com/Archon4CR/test) — 归约证明测试项目，包含 3 道题的完整 Lean 证明和 CR advisor 报告
 - [docs](https://github.com/Archon4CR/docs) — 本仓库，项目文档
