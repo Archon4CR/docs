@@ -1,104 +1,104 @@
-# Archon + ComplexityReduction 归约问题测试报告
+# Archon + ComplexityReduction Reduction Problem Test Report
 
-状态：已完成
-日期：2026-08-23
-分支：`codex/complexity-reduction-integration`（Archon 仓库）
+Status: Completed
+Date: 2026-08-23
+Branch: `complexity-reduction-integration` (Archon repository)
 
-## 1. 测试目标
+## 1. Test Objectives
 
-使用 `problems/problems_clean.json` 中整理的 NP 完全性归约问题集，
-测试修改后的 Archon（集成 CR advisor 子代理、搜索脚本、参考文档、prover-mode）
-在归约证明上的表现。核心问题：**CR 知识注入是否提升了 prover 的自主证明能力？**
+Using the curated set of NP-completeness reduction problems in `problems/problems_clean.json`,
+we tested how the modified Archon (integrating the CR advisor subagent, search scripts, reference
+documents, and prover-mode) performs on reduction proofs. The core question: **Does CR knowledge injection improve the prover's autonomous proving ability?**
 
-测试路线：路线 A（sorry stub + 标准 loop + CR advisor），详见
-[REDUCTION_TEST_PLAN.md](REDUCTION_TEST_PLAN.md)。
+Test route: Route A (sorry stub + standard loop + CR advisor); see
+[REDUCTION_TEST_PLAN.md](REDUCTION_TEST_PLAN.md) for details.
 
-## 2. 选题
+## 2. Problem Selection
 
-| ID | 归约 | 难度 | 选择理由 |
+| ID | Reduction | Difficulty | Reason for Selection |
 |----|------|------|----------|
-| 01-001 | SAT -> DOUBLE-SAT | easy | 最简单入门题，CR 有 SAT 编码 |
-| 02-004 | 3SAT -> NAE-3SAT | hard | 经典归约，CR 有 3SAT 编码 |
-| 06-017 | CLIQUE -> INDEPENDENT SET | medium | 图论归约，解法简洁（补图） |
+| 01-001 | SAT -> DOUBLE-SAT | easy | Simplest entry-level problem; CR has a SAT encoding |
+| 02-004 | 3SAT -> NAE-3SAT | hard | Classic reduction; CR has a 3SAT encoding |
+| 06-017 | CLIQUE -> INDEPENDENT SET | medium | Graph-theoretic reduction; concise solution (complement graph) |
 
-三道题覆盖了 CR 库的三种典型复用场景：完全复用、全新构建、部分复用。
+The three problems cover the three typical reuse scenarios of the CR library: full reuse, building from scratch, and partial reuse.
 
-## 3. 测试流程
+## 3. Test Workflow
 
 ````
-problems_clean.json (自然语言题目)
-  -> 选题 3 道
-  -> 写 blueprint .tex 章节（半形式化 LaTeX + \lean{} 标注）
-  -> Archon formalize 模式 -> 生成 Lean sorry stub（iter-014 完成）
-  -> Archon prove 模式 + CR advisor -> 填充证明（iter-015~018）
-  -> Archon polish 模式 -> golf 优化 + 清理（iter-020~021）
-  -> lake build 绿色，0 sorry，0 额外公理
+problems_clean.json (problems stated in natural language)
+  -> select 3 problems
+  -> write blueprint .tex sections (semi-formal LaTeX + \lean{} annotations)
+  -> Archon formalize mode -> generate Lean sorry stubs (completed at iter-014)
+  -> Archon prove mode + CR advisor -> fill in proofs (iter-015~018)
+  -> Archon polish mode -> golf optimization + cleanup (iter-020~021)
+  -> lake build green, 0 sorries, 0 extra axioms
 ````
 
-- 项目路径：`reduction-test/`
-- Harness：codex（Codex CLI 子进程）
-- 迭代总数：21 轮（iter-001 ~ iter-021）
+- Project path: `reduction-test/`
+- Harness: codex (Codex CLI subprocess)
+- Total iterations: 21 rounds (iter-001 ~ iter-021)
 
-## 4. CR Advisor 验证（核心测试目标）
+## 4. CR Advisor Validation (Core Test Objective)
 
-CR advisor 在 iter-001 和 iter-004 被派发共 5 次，生成 3 份详细报告。
-报告存档于 `logs/iter-006/task_results-archive/`。
+The CR advisor was dispatched 5 times in total across iter-001 and iter-004, generating 3 detailed reports.
+The reports are archived in `logs/iter-006/task_results-archive/`.
 
-### 4.1 派发记录
+### 4.1 Dispatch Records
 
-| 迭代 | slug | 耗时 | 状态 |
+| Iteration | slug | Duration | Status |
 |------|------|------|------|
 | iter-001 | nae3sat | 2624s | ok |
-| iter-001 | double-sat | （超时未记录） | 超时 |
-| iter-001 | independent-set | （超时未记录） | 超时 |
-| iter-004 | independentset | 125s | fail（首次） |
-| iter-004 | independentset | 2483s | ok（重试） |
-| iter-004 | doublesat | （超时未记录） | 超时 |
+| iter-001 | double-sat | (timed out, not recorded) | timeout |
+| iter-001 | independent-set | (timed out, not recorded) | timeout |
+| iter-004 | independentset | 125s | fail (first attempt) |
+| iter-004 | independentset | 2483s | ok (retry) |
+| iter-004 | doublesat | (timed out, not recorded) | timeout |
 
-iter-001 的 3 个并发派发中仅 nae3sat 在 44 分钟内完成，
-double-sat 和 independent-set 因供应商网络超时未返回。
-iter-004 重新派发后 independentset 成功（重试 1 次后），
-doublesat 最终也完成了报告。
+Of the 3 concurrent dispatches in iter-001, only nae3sat completed within 44 minutes;
+double-sat and independent-set did not return due to vendor network timeouts.
+After redispatch in iter-004, independentset succeeded (after 1 retry), and
+doublesat eventually completed its report as well.
 
-### 4.2 Advisor 判定与最终证明对照
+### 4.2 Advisor Verdicts vs. Final Proofs
 
-| 题目 | Advisor 判定 | 关键建议 | 最终证明是否采纳 |
+| Problem | Advisor Verdict | Key Recommendations | Adopted in Final Proof? |
 |------|-------------|----------|------------------|
-| NAE3SAT | **REUSE** | 直接 re-export `threeSATToNAE3CostedReduction` | 是，证明仅 1 行 `exact (…satisfiable_iff).symm` |
-| DoubleSAT | **BUILD_NEW** | 自定义 `EncodedDecisionProblem`，映射 `phi ++ [[pos y, neg y]]`，用 `satisfies_append` + `clause_vars_lt_varBound` | 是，全部 API 均被采用 |
-| IndependentSet | **PARTIAL** | CLIQUE 复用 CR，IS 从零构建，`complementGraph` 来自 `Karp21.VertexCover`，`of_emptyOutputEncoding` | 是，证明用 `hasUndirectedEdge_complementGraph_iff` + `of_emptyOutputEncoding` |
+| NAE3SAT | **REUSE** | Directly re-export `threeSATToNAE3CostedReduction` | Yes; the proof is a single line `exact (…satisfiable_iff).symm` |
+| DoubleSAT | **BUILD_NEW** | Custom `EncodedDecisionProblem` mapping `phi ++ [[pos y, neg y]]`, using `satisfies_append` + `clause_vars_lt_varBound` | Yes; all APIs were adopted |
+| IndependentSet | **PARTIAL** | Reuse CR for CLIQUE, build IS from scratch; `complementGraph` from `Karp21.VertexCover`, plus `of_emptyOutputEncoding` | Yes; the proof uses `hasUndirectedEdge_complementGraph_iff` + `of_emptyOutputEncoding` |
 
-**结论：CR advisor 的知识注入有效。** 三道题的最终证明策略与 advisor
-报告完全一致。advisor 准确区分了三种复用程度（REUSE / BUILD_NEW / PARTIAL），
-prover 在 advisor 指引下正确选择了 CR 库 API，避免了盲目搜索。
+**Conclusion: CR advisor knowledge injection is effective.** The final proof strategies for the three
+problems match the advisor reports exactly. The advisor accurately distinguished the three reuse levels
+(REUSE / BUILD_NEW / PARTIAL), and the prover chose CR library APIs correctly under the advisor's guidance, avoiding blind searching.
 
-### 4.3 Advisor 报告内容示例
+### 4.3 Example Advisor Report Content
 
-以 IndependentSet（PARTIAL）为例，advisor 报告包含：
+Taking IndependentSet (PARTIAL) as an example, the advisor report contains:
 
-- 源问题 CLIQUE 在 CR 中的完整定位（文件、行号、类型签名）
-- 目标问题 INDEPENDENT SET 在 CR 中不存在（全局搜索 0 匹配）
-- 可复用基础设施：`complementGraph`、`complementEdges`、`hasUndirectedEdge_complementGraph_iff`
-- 构造路径：`CostedReduction.ofCostedMap` + `CostedMap.of_emptyOutputEncoding`
-- 与已证归约的对比：比 `Karp21.VertexCover` 的 CLIQUE->VC 更简单（无预算变换）
+- Full location of the source problem CLIQUE in CR (file, line numbers, type signature)
+- The target problem INDEPENDENT SET does not exist in CR (0 matches in a global search)
+- Reusable infrastructure: `complementGraph`, `complementEdges`, `hasUndirectedEdge_complementGraph_iff`
+- Construction path: `CostedReduction.ofCostedMap` + `CostedMap.of_emptyOutputEncoding`
+- Comparison with proven reductions: simpler than the CLIQUE->VC reduction in `Karp21.VertexCover` (no budget transformation)
 
-## 5. 证明结果
+## 5. Proof Results
 
-### 5.1 总览
+### 5.1 Overview
 
-| 文件 | sorries | 完成迭代 | 公理 | lake build |
+| File | sorries | Completed in Iteration | Axioms | lake build |
 |------|---------|----------|------|------------|
-| NAE3SAT.lean | 0 | iter-015 | 标准三公理 | 绿色 |
-| DoubleSAT.lean | 0 | iter-017 | 标准三公理 | 绿色 |
-| IndependentSet.lean | 0 | iter-018 | 标准三公理 | 绿色 |
+| NAE3SAT.lean | 0 | iter-015 | standard three axioms | green |
+| DoubleSAT.lean | 0 | iter-017 | standard three axioms | green |
+| IndependentSet.lean | 0 | iter-018 | standard three axioms | green |
 
-标准三公理：`propext`、`Classical.choice`、`Quot.sound`（无 `sorryAx`、`admit`）。
-`lake build` 全量构建 8403 jobs，exit 0。
+Standard three axioms: `propext`, `Classical.choice`, `Quot.sound` (no `sorryAx`, `admit`).
+`lake build` full build with 8403 jobs, exit 0.
 
-### 5.2 NAE3SAT.lean — 3SAT -> NAE-3SAT（REUSE）
+### 5.2 NAE3SAT.lean — 3SAT -> NAE-3SAT (REUSE)
 
-最简单的案例。CR 库 `CSP.Hardness.NAE3SAT` 已有完整的 `threeSATToNAE3CostedReduction`
-和 `threeCNFToNAE3Formula_satisfiable_iff`。prover 只需 re-export 并用 1 行 `exact` 闭合。
+The simplest case. The CR library `CSP.Hardness.NAE3SAT` already contains the complete `threeSATToNAE3CostedReduction`
+and `threeCNFToNAE3Formula_satisfiable_iff`. The prover only had to re-export them and close the proof with a single-line `exact`.
 
 ```lean
 theorem threeSATToNAE3SAT_correct (phi : SAT.ThreeCNF) :
@@ -107,57 +107,57 @@ theorem threeSATToNAE3SAT_correct (phi : SAT.ThreeCNF) :
   exact (CSP.Hardness.NAE3SAT.threeCNFToNAE3Formula_satisfiable_iff phi).symm
 ```
 
-完成：iter-015，2 sessions（28 + 103 turns）。
+Completed: iter-015, 2 sessions (28 + 103 turns).
 
-### 5.3 DoubleSAT.lean — SAT -> DOUBLE-SAT（BUILD_NEW）
+### 5.3 DoubleSAT.lean — SAT -> DOUBLE-SAT (BUILD_NEW)
 
-中等难度。CR 库无 DOUBLE-SAT 编码，需从零构建。
-归约映射：在 CNF 后追加恒真子句 `[pos y, neg y]`（`y = CNF.varBound phi` 为新变量）。
+Medium difficulty. The CR library has no DOUBLE-SAT encoding, so it had to be built from scratch.
+Reduction map: append the always-true clause `[pos y, neg y]` after the CNF (`y = CNF.varBound phi` is a fresh variable).
 
-证明分两部分：
-- **正确性**（`satToDoubleSAT_correct`，~80 行）：前向用 `Clause.setVar` 在新变量上产生两个不同赋值；后向从 `satisfies_append` 提取原公式可满足性。
-- **尺寸界**（`LinearSizeBound.intro_with 3 9`）：追加子句贡献 `2y + 9`，`y <= inputSize(phi)`，总计 `<= 3*inputSize + 9`。
+The proof has two parts:
+- **Correctness** (`satToDoubleSAT_correct`, ~80 lines): the forward direction uses `Clause.setVar` to produce two distinct assignments on the new variable; the backward direction extracts the satisfiability of the original formula from `satisfies_append`.
+- **Size bound** (`LinearSizeBound.intro_with 3 9`): the appended clause contributes `2y + 9`, with `y <= inputSize(phi)`, for a total of `<= 3*inputSize + 9`.
 
-关键转折：iter-016 卡在错误的尺寸常量 `2 4`（iter-015 stub 中的占位值）。
-iter-017 planner 通过编码尺寸计算诊断出正确常量为 `3 9`，prover 随后闭合。
+Key turning point: iter-016 got stuck on the wrong size constants `2 4` (placeholder values from the iter-015 stub).
+In iter-017 the planner diagnosed the correct constants `3 9` via the encoding size computation, and the prover then closed the proof.
 
-完成：iter-017，5 sessions（155 + 60 + 98 + ... turns）。
+Completed: iter-017, 5 sessions (155 + 60 + 98 + ... turns).
 
-### 5.4 IndependentSet.lean — CLIQUE -> IS（PARTIAL）
+### 5.4 IndependentSet.lean — CLIQUE -> IS (PARTIAL)
 
-最难案例。CLIQUE 在 CR 库中已编码，IS 需从零构建。
-归约映射：取补图（`complementGraph`），保持预算 `k`。
+The hardest case. CLIQUE is already encoded in the CR library; IS had to be built from scratch.
+Reduction map: take the complement graph (`complementGraph`) and keep the budget `k`.
 
-此题经历了最多波折：
+This problem went through the most twists and turns:
 
-| 迭代 | Mode | Sessions | Turns | 文件改动 | 结果 |
+| Iteration | Mode | Sessions | Turns | File Changes | Result |
 |------|------|----------|-------|----------|------|
-| iter-015 | prove | 3 | 175 | 0 | 卡住：prover 推导出完整证明但从未写入文件 |
-| iter-016 | fine-grained | 3 | 137 | 0 | 卡住：pure 文件读取，idle_timeout 退出 |
-| iter-017 | fine-grained | 3 | — | 0 | 卡住：后端 0-token 问题 |
-| iter-018 | complexity-reduction-build | 1 | 184 | 5 | 解决 |
+| iter-015 | prove | 3 | 175 | 0 | Stuck: the prover derived the complete proof but never wrote it to a file |
+| iter-016 | fine-grained | 3 | 137 | 0 | Stuck: pure file reading, exited on idle_timeout |
+| iter-017 | fine-grained | 3 | — | 0 | Stuck: backend 0-token issue |
+| iter-018 | complexity-reduction-build | 1 | 184 | 5 | Solved |
 
-iter-015 的 prover 在 86K 字符的 thinking block 中推导出了完整证明，
-但从未调用 `apply_patch` 写入文件——这是"想清楚但没写出"的典型案例。
+The iter-015 prover derived the complete proof inside an 86K-character thinking block but never called
+`apply_patch` to write it to a file — a textbook case of "figured it out but never wrote it down".
 
-iter-018 切换到 `complexity-reduction-build` mode 后 1 session 即完成。
-该 mode 要求不输出 sorry，强制 bottom-up 组装 CR 证书，
-prover 被迫在每一步要么写出可编译的代码、要么不写。
+After switching to the `complexity-reduction-build` mode in iter-018, the problem was completed in
+a single session. That mode requires emitting no sorries and forces bottom-up assembly of the CR
+certificate; the prover was forced, at every step, to either write compilable code or write nothing.
 
-关键证明模式：
+Key proof pattern:
 
 ```lean
 theorem cliqueToIndependentSet_correct (I : CliqueInput) :
     Clique I <-> IndependentSet (cliqueToIndependentSetMap I) := by
   unfold Clique IndependentSet PairwiseAdjacent cliqueToIndependentSetMap
   constructor
-  · -- 前向：clique 的 witness 直接复用，邻接 -> 补图非邻接
+  · -- Forward: reuse the clique's witness directly; adjacency -> non-adjacency in the complement graph
     rintro (vs, hlen, hnodup, hbounds, hadj)
     refine (vs, hlen, hnodup, hbounds, ?_)
     rintro u hu v hv huv
     rw [Karp21.VertexCover.hasUndirectedEdge_complementGraph_iff]
     simp [hadj u hu v hv huv]
-  · -- 反向：by_contra，补图非邻接 -> 邻接矛盾
+  · -- Backward: by_contra; non-adjacency in the complement graph -> contradiction with adjacency
     rintro (vs, hlen, hnodup, hbounds, hnonadj)
     refine (vs, hlen, hnodup, hbounds, ?_)
     rintro u hu v hv huv
@@ -167,79 +167,120 @@ theorem cliqueToIndependentSet_correct (I : CliqueInput) :
     exact (hbounds u hu, hbounds v hv, huv, h)
 ```
 
-## 6. 测试过程中发现的问题及修复
+## 6. Issues Found and Fixes During Testing
 
-### 6.1 Archon 源码修复（已提交）
+### 6.1 Archon Source Fixes (Committed)
 
-| # | 问题 | 影响 | 修复 | Commit |
+| # | Issue | Impact | Fix | Commit |
 |---|------|------|------|--------|
-| Fix A | `fine-grained.md` 等 mode 文件未被 `archon init` 复制 | prover 拿到空 system prompt | `runners.py` fallback 到 `prove.md` + 手动补全 5 个文件 | `5a6bc7b` |
-| Fix B | prover 只探索不写代码 | IndependentSet 7 sessions 0 产出 | `prove.md` 加入 write-first protocol | `5a6bc7b` |
-| Fix C | `is_complete` 不识别 `polish (complete)` | loop 无法自动停止 | `progress.py` 改为全文匹配 + 大小写不敏感 | `343f2ef` |
+| Fix A | Mode files such as `fine-grained.md` were not copied by `archon init` | The prover received an empty system prompt | `runners.py` falls back to `prove.md` + the 5 files completed manually | `5a6bc7b` |
+| Fix B | The prover only explored without writing code | IndependentSet: 7 sessions, 0 output | Added a write-first protocol to `prove.md` | `5a6bc7b` |
+| Fix C | `is_complete` did not recognize `polish (complete)` | The loop could not stop automatically | `progress.py` changed to full-text matching + case-insensitive | `343f2ef` |
 
-### 6.2 项目配置修复（未提交到 Archon）
+### 6.2 Project Configuration Fixes (Not Committed to Archon)
 
-| 问题 | 修复 |
+| Issue | Fix |
 |------|------|
-| `features.plugins=false` 阻断 codex 子进程的 `exec_command` | 从 `.archon/config.json` 移除该配置项 |
-| prompt variant 引用不存在的 `read_file` 工具 | 改为 `exec_command` + shell 读取 |
-| 5 个 ArchonTest 残留文件误导模型 | 重写为 reduction-test 实际状态 |
-| `.archon/prover-modes/` 只有 2 个文件（应有 7 个） | 从 Archon 源码手动复制缺失的 5 个 |
+| `features.plugins=false` blocked `exec_command` in the codex subprocess | Removed the setting from `.archon/config.json` |
+| A prompt variant referenced the nonexistent `read_file` tool | Changed to `exec_command` + shell reads |
+| 5 leftover ArchonTest files misled the model | Rewritten to reflect the actual reduction-test state |
+| `.archon/prover-modes/` had only 2 files (7 expected) | Manually copied the 5 missing ones from the Archon source |
 
-### 6.3 非 Archon 问题
+### 6.3 Non-Archon Issues
 
-| 问题 | 说明 |
+| Issue | Description |
 |------|------|
-| 供应商网络中断（iters 7-13） | 后端 API 不稳定，导致多轮空转 |
-| `sync_leanok` Windows false-negative | 每轮删除所有 `\leanok` 标记，需手动恢复 |
-| CRLF 行尾 | DoubleSAT.lean 有 CRLF，apply_patch 在 CRLF 文件上失败 |
-| DoubleSAT 尺寸常量错误 `2 4` | formalize 阶段生成的 stub 占位值，planner 在 iter-017 纠正为 `3 9` |
+| Vendor network outage (iters 7-13) | Unstable backend API caused multiple idle rounds |
+| `sync_leanok` Windows false-negative | Every round deleted all `\leanok` markers, requiring manual restoration |
+| CRLF line endings | DoubleSAT.lean had CRLF; apply_patch failed on CRLF files |
+| Wrong DoubleSAT size constants `2 4` | Stub placeholder values generated in the formalize phase; the planner corrected them to `3 9` in iter-017 |
 
-## 7. 迭代时间线
+## 7. Iteration Timeline
 
-| 迭代 | 阶段 | 关键事件 |
+| Iteration | Phase | Key Events |
 |------|------|----------|
-| 001-004 | autoformalize | CR advisor 派发（5 次），3 份报告生成 |
-| 005-006 | autoformalize | formalize 继续 |
-| 007-013 | （空转） | 供应商网络中断 |
-| 014 | autoformalize | formalize 完成：14 声明，6 sorry |
-| 015 | prover | 首轮：NAE3SAT 解决，DoubleSAT 部分，IS 卡住（0 产出） |
-| 016 | prover | DoubleSAT 卡在错误常量 `2 4`，IS 继续卡住 |
-| 017 | prover | planner 纠正常量为 `3 9`，DoubleSAT 解决；IS 切 fine-grained 仍失败 |
-| 018 | prover | IS 切 `complexity-reduction-build` mode，1 session 解决 |
-| 019 | （空转） | — |
-| 020 | polish | golf 优化 + 清理脚手架注释 + 修复 IS 重复声明 |
-| 021 | polish | coverage debt 清理，项目标记 COMPLETE |
+| 001-004 | autoformalize | CR advisor dispatches (5), 3 reports generated |
+| 005-006 | autoformalize | formalize continued |
+| 007-013 | (idle) | Vendor network outage |
+| 014 | autoformalize | formalize completed: 14 declarations, 6 sorries |
+| 015 | prover | First round: NAE3SAT solved, DoubleSAT partial, IS stuck (0 output) |
+| 016 | prover | DoubleSAT stuck on the wrong constants `2 4`; IS still stuck |
+| 017 | prover | Planner corrected the constants to `3 9`, DoubleSAT solved; IS still failed after switching to fine-grained |
+| 018 | prover | IS switched to the `complexity-reduction-build` mode and was solved in 1 session |
+| 019 | (idle) | — |
+| 020 | polish | Golf optimization + cleanup of scaffolding comments + fixed the duplicate IS declaration |
+| 021 | polish | Coverage debt cleanup; project marked COMPLETE |
 
-## 8. 统计
+## 8. Statistics
 
-- 总迭代数：21
-- 有效证明迭代：4（iter-015, 016, 017, 018）
-- 总 sorry 数：6 -> 0
-- 最终 `lake build`：8403 jobs，exit 0
-- 公理：仅 `propext`、`Classical.choice`、`Quot.sound`
-- CR advisor 派发：5 次（iter-001 x 3，iter-004 x 2），3 份报告成功
-- Archon 源码修复：3 个（Fix A/B/C），2 次 commit
+- Total iterations: 21
+- Productive proof iterations: 4 (iter-015, 016, 017, 018)
+- Total sorries: 6 -> 0
+- Final `lake build`: 8403 jobs, exit 0
+- Axioms: only `propext`, `Classical.choice`, `Quot.sound`
+- CR advisor dispatches: 5 (iter-001 x 3, iter-004 x 2), 3 reports succeeded
+- Archon source fixes: 3 (Fix A/B/C), 2 commits
 
-## 9. 结论
+## 9. Conclusions
 
-1. **CR advisor 知识注入有效。** 三道题的最终证明策略与 advisor 报告完全一致，
-   advisor 准确区分了 REUSE / BUILD_NEW / PARTIAL 三种复用程度，
-   prover 在 advisor 指引下正确使用了 CR 库 API。
+1. **CR advisor knowledge injection is effective.** The final proof strategies for all three problems
+   match the advisor reports exactly; the advisor accurately distinguished the three reuse levels
+   REUSE / BUILD_NEW / PARTIAL, and the prover used CR library APIs correctly under the advisor's guidance.
 
-2. **`complexity-reduction-build` mode 在困难场景下有效。** IndependentSet 在
-   默认 `prove` 和 `fine-grained` mode 下 7 sessions 0 产出，切换到
-   `complexity-reduction-build` 后 1 session 即完成。该 mode 的"不输出 sorry"
-   约束迫使 prover 逐步组装可编译的 CR 证书。
+2. **The `complexity-reduction-build` mode is effective in hard scenarios.** IndependentSet produced
+   0 output across 7 sessions under the default `prove` and `fine-grained` modes; after switching to
+   `complexity-reduction-build`, it was completed in 1 session. The mode's "no sorry output" constraint
+   forced the prover to assemble a compilable CR certificate step by step.
 
-3. **write-first 问题需关注。** prover 存在"想清楚但没写出"的行为模式——
-   在 thinking block 中推导出完整证明但不调用 `apply_patch`。write-first protocol
-   （Fix B）通过硬性规则约束了这一行为，但更系统的解决方案可能需要在
-   runner 层面强制 apply_patch 调用。
+3. **The write-first problem deserves attention.** The prover exhibits a "figured it out but never
+   wrote it down" behavior pattern — deriving a complete proof inside a thinking block without calling
+   `apply_patch`. The write-first protocol (Fix B) constrained this behavior with hard rules, but a more
+   systematic solution may require enforcing apply_patch calls at the runner level.
 
-4. **Archon 的自动完成检测有缺陷。** `is_complete` 原实现只检查 stage 的
-   第一个词，无法识别 `polish (complete)` 等非标准格式，导致 loop 在项目
-   完成后继续空转。Fix C 已修复。
+4. **Archon's automatic completion detection was flawed.** The original `is_complete` implementation
+   only checked the first word of the stage and failed to recognize non-standard formats such as
+   `polish (complete)`, causing the loop to keep idling after the project was complete. Fixed by Fix C.
 
-5. **Windows 兼容性是持续问题。** `sync_leanok` false-negative、CRLF 行尾、
-   `apply_patch` 在 CRLF 文件上失败等问题反复出现，建议增加 Windows CI。
+5. **Windows compatibility is a persistent problem.** Issues such as the `sync_leanok` false-negative,
+   CRLF line endings, and `apply_patch` failing on CRLF files kept recurring; adding Windows CI is recommended.
+
+6. **Statement fidelity has a known gap.** The theorems proven in this round capture the existence
+   and correctness of each reduction (the yes-instance iff), but not the polynomial-time
+   computability of the reduction maps. See Section 10.
+
+## 10. Known Limitation: Statement Fidelity Gap (Polynomial-Time Obligation Not Formalized)
+
+The natural-language claims tested in this round ("X is NP-complete via reduction from Y") carry
+three obligations: (i) an instance encoding, (ii) correctness (yes-instances correspond if and
+only if), and (iii) the reduction map is polynomial-time computable. The Lean theorems produced
+by the loop cover only (i) and (ii):
+
+- `DoubleSAT.lean` proves the iff between `SAT.CNF.Satisfiable phi` and
+  `doubleSATDecisionProblem.isYes (satToDoubleSATMap phi)`. The map `satToDoubleSATMap` is a
+  plain `def` (computable in Lean's definitional sense), with no statement about its time
+  complexity.
+- `NAE3SAT.lean` re-exports a `CostedReduction` from the ComplexityReduction library, but the
+  theorem proven here (`threeSATToNAE3SAT_correct`) is again only the bare iff; the cost part
+  rides on the library's existing result rather than being an obligation discharged by this test.
+- `IndependentSet.lean` proves the complement-graph iff, and additionally assembles a
+  `CostedReduction` via `CostedMap.of_emptyOutputEncoding`. That constructor charges cost 0 by
+  requiring the output encoding to be always empty, and the ComplexityReduction docstring states
+  explicitly that it "is not a faithful natural-language encoding theorem by itself" — the cost
+  certificate is vacuous.
+
+In other words, every formal theorem produced in this round is **strictly weaker** than its
+natural-language original: a proof that compiles with zero `sorry` and is axiom-clean still does
+not establish NP-completeness as claimed, because the polynomial-time obligation was silently
+dropped during formalization. This is a concrete instance of the "compiling does not imply
+semantic fidelity" problem (statement-level semantic weakening) known from the autoformalization
+literature: LLM judges are insensitive to this kind of loosening, and no stage of the current
+pipeline encoded the obligations as verification targets.
+
+Until the cost obligation is formalized — e.g., by making a `CostedReduction` with a genuine cost
+certificate (such as `CostedMap.of_encodedPolynomialSizeBound`), or an equivalent polynomial-time
+computability statement, the mandatory proof target instead of the bare iff — the results of this
+round should be read as "reduction existence and correctness, formally verified", not as complete
+formal NP-completeness proofs. Follow-up work: extract an obligation checklist (encoding / iff /
+computability / cost bound) from each natural-language problem statement, make it a hard
+constraint of the prove loop, and add automated loosening detection (e.g., implication-strength
+checks against Lean).

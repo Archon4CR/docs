@@ -1,145 +1,153 @@
-# Archon + ComplexityReduction 归约问题测试方案
+# Archon + ComplexityReduction Reduction Problem Test Plan
 
-## 目标
+## Goal
 
-使用 `problems/problems_clean.json` 中整理的 NP 完全性归约问题集，
-测试修改后的 Archon（集成 CR advisor 子代理、搜索脚本、参考文档、prover-mode）
-在归约证明上的表现。
+Use the curated NP-completeness reduction problem set in
+`problems/problems_clean.json` to test how the modified Archon (with the
+CR advisor subagent, search scripts, reference docs, and prover-mode
+integrated) performs on reduction proofs.
 
-## 路线选择：路线 A（sorry stub + 标准 loop + CR advisor）
+## Route Choice: Route A (sorry stub + standard loop + CR advisor)
 
-### 为什么选路线 A
+### Why Route A
 
-| 维度 | 路线 A | 路线 B (complexity-reduction-build) |
+| Dimension | Route A | Route B (complexity-reduction-build) |
 |------|--------|-------------------------------------|
-| 测试对象 | CR 知识是否帮助标准证明流程 | CR-build prover-mode 本身 |
-| 预处理 | 需要写 blueprint + 生成 stub | 只需 PROGRESS.md 描述目标 |
-| 证明目标 | 填充 sorry stub（闭合已有声明） | 从零构建 CostedReduction 证书 |
-| 与 CR 的关系 | advisor 辅助查找已有编码/模板 | mode 本身就是在构建 CR 设施 |
-| 适用场景 | 验证集成效果（本次目标） | 验证 build mode 的从零构建能力 |
+| What is tested | Whether CR knowledge helps the standard proof pipeline | The CR-build prover-mode itself |
+| Preprocessing | Requires writing a blueprint + generating stubs | Only needs PROGRESS.md describing the target |
+| Proof target | Fill in sorry stubs (close existing declarations) | Build a CostedReduction certificate from scratch |
+| Relation to CR | Advisor assists in finding existing encodings/templates | The mode itself is building CR infrastructure |
+| Applicable scenario | Verify the integration effect (this round's goal) | Verify the build mode's from-scratch capability |
 
-路线 A 测试的是"CR 知识注入是否提升了 prover 的表现"，
-这正是我们三阶段集成工作的核心目标。
+Route A tests "whether CR knowledge injection improves the prover's
+performance", which is exactly the core goal of our three-phase integration
+work.
 
-### 不选路线 B 的原因（本次）
+### Why Route B Is Not Chosen (This Round)
 
-`complexity-reduction-build` 模式要求不输出 sorry，
-因为它构建的是归约基础设施（`CostedReduction` 证书），而非闭合已有 stub。
-一个带 sorry 的 `CostedReduction` 作为证书是毫无意义的。
-该模式测试的是从零构建能力，与本次"测试 CR 集成效果"的目标不完全对齐。
+The `complexity-reduction-build` mode requires producing no `sorry`,
+because it builds reduction infrastructure (`CostedReduction` certificates)
+rather than closing existing stubs.
+A `CostedReduction` containing a `sorry` is meaningless as a certificate.
+That mode tests from-scratch building capability, which is not fully aligned
+with this round's goal of "testing the CR integration effect".
 
 ---
 
-## 完整工作流
+## Full Workflow
 
 ```
-problems_clean.json (自然语言题目)
+problems_clean.json (natural-language problems)
         |
         v
-  1. 选题（3-5 题，混合难度）
+  1. Problem selection (3-5 problems, mixed difficulty)
         |
         v
-  2. 写 blueprint .tex 章节（半形式化 LaTeX + \lean{} 标注）
+  2. Write blueprint .tex chapters (semi-formal LaTeX + \lean{} annotations)
         |
         v
-  3. Archon formalize 模式 -> 生成 Lean sorry stub（编译通过）
+  3. Archon formalize mode -> generate Lean sorry stubs (compiles)
         |
         v
-  4. Archon prove 模式 + CR advisor -> 填充证明
+  4. Archon prove mode + CR advisor -> fill in proofs
         |
         v
-  5. 检查 dispatch.jsonl / task_results 确认 CR 设施起效
+  5. Check dispatch.jsonl / task_results to confirm the CR infrastructure took effect
 ```
 
-### 第 1 步：选题
+### Step 1: Problem Selection
 
-从 `problems_clean.json`（63 题）中选取 3-5 题，优先选择：
-- CR 库已有相关编码的问题（3SAT 系列）
-- 混合难度（easy / medium / hard）
-- 有完整 solution 的问题（便于验证正确性）
+Pick 3-5 problems from `problems_clean.json` (63 problems), preferring:
+- Problems for which the CR library already has related encodings (3SAT family)
+- Mixed difficulty (easy / medium / hard)
+- Problems with a complete solution (making correctness easy to verify)
 
-**初选清单：**
+**Initial shortlist:**
 
-| ID | 归约 | 难度 | 有解 | 选择理由 |
+| ID | Reduction | Difficulty | Has solution | Reason for selection |
 |----|------|------|------|----------|
-| 01-001 | SAT -> DOUBLE-SAT | easy | yes | 最简单的入门题，CR 有 SAT 编码 |
-| 02-004 | 3SAT -> NAE-3SAT | hard | yes | 经典归约，CR 有 3SAT 编码 |
-| 06-017 | CLIQUE -> INDEPENDENT SET | -- | yes | 图论归约，解法简洁（补图） |
+| 01-001 | SAT -> DOUBLE-SAT | easy | yes | Simplest warm-up problem; CR has a SAT encoding |
+| 02-004 | 3SAT -> NAE-3SAT | hard | yes | Classic reduction; CR has a 3SAT encoding |
+| 06-017 | CLIQUE -> INDEPENDENT SET | -- | yes | Graph-theoretic reduction with a concise solution (complement graph) |
 
-可扩展候选：
-- 06-018: INDEPENDENT SET -> VERTEX COVER（与 06-017 形成链）
-- 02-007: VERTEX COVER -> SET COVER（经典覆盖问题）
+Extensible candidates:
+- 06-018: INDEPENDENT SET -> VERTEX COVER (forms a chain with 06-017)
+- 02-007: VERTEX COVER -> SET COVER (classic covering problem)
 
-### 第 2 步：写 blueprint .tex
+### Step 2: Write blueprint .tex
 
-为每道题写一个 blueprint 章节（LaTeX），包含：
-- `\section{...}` 章节标题
-- `\begin{theorem}...\end{theorem}` 定理块，内含 `\lean{declName}` 标注
-- `\begin{proof}...\end{proof}` 证明草稿
+Write one blueprint chapter (LaTeX) per problem, containing:
+- `\section{...}` chapter heading
+- `\begin{theorem}...\end{theorem}` theorem block with a `\lean{declName}`
+  annotation inside
+- `\begin{proof}...\end{proof}` proof draft
 
-文件命名规则：`blueprint/src/chapters/ReductionTest_<Name>.tex`
-（对应 Lean 文件 `ReductionTest/<Name>.lean`）
+File naming convention: `blueprint/src/chapters/ReductionTest_<Name>.tex`
+(corresponding to the Lean file `ReductionTest/<Name>.lean`)
 
-blueprint 中需要意识到 CR 库的类型体系：
-- `EncodedDecisionProblem` -- 基本决策问题类型
-- `CostedReduction A B` -- 归约证书（含 `f`、`correct`、`costed`）
-- `SAT.threeSATDecisionProblem` -- 已有的 3SAT 编码
+The blueprint needs to be aware of the CR library's type system:
+- `EncodedDecisionProblem` -- the basic decision-problem type
+- `CostedReduction A B` -- reduction certificate (with `f`, `correct`, `costed`)
+- `SAT.threeSATDecisionProblem` -- the existing 3SAT encoding
 
-### 第 3 步：生成 Lean sorry stub
+### Step 3: Generate Lean sorry stubs
 
-两种方式：
+Two options:
 
-**方式一（推荐）：交给 Archon formalize 模式**
+**Option 1 (recommended): hand it to the Archon formalize mode**
 
-Archon 的 `formalize` prover-mode 专门为此设计：
-- 读 blueprint `.tex` 章节
-- 为每个 theorem/lemma/definition 块生成带 `sorry` 的 Lean 声明
-- 验证文件编译通过
+Archon's `formalize` prover-mode is designed exactly for this:
+- Reads blueprint `.tex` chapters
+- Generates Lean declarations with `sorry` for every theorem/lemma/definition
+  block
+- Verifies the file compiles
 
-只需在 PROGRESS.md 中将阶段设为 `autoformalize`，
-formalize 模式会自动从 blueprint 生成 stub。
+Simply set the stage to `autoformalize` in PROGRESS.md, and the formalize
+mode will generate stubs from the blueprint automatically.
 
-**方式二：手动写 stub**
+**Option 2: write stubs manually**
 
-直接在 `.lean` 文件中写声明签名 + `sorry`。
+Write declaration signatures + `sorry` directly in `.lean` files.
 
-推荐方式一，因为它同时测试了 Archon 的 formalize 能力。
+Option 1 is recommended because it also tests Archon's formalize capability.
 
-### 第 4 步：运行 Archon prove + CR advisor
+### Step 4: Run Archon prove + CR advisor
 
-在 `.archon/config.json` 中：
+In `.archon/config.json`:
 - `subagents.enabled: ["complexity-reduction-advisor"]`
-- `harness: "codex"`（或用户偏好的 harness）
-- prover 阶段自动使用 `prove` 模式
+- `harness: "codex"` (or the user's preferred harness)
+- The prover stage automatically uses the `prove` mode
 
-运行命令：
+Run command:
 ```powershell
 archon loop .
 ```
 
-CR advisor 会在 plan 阶段被派发（参见下文"CR 设施验证"），
-检查 CR 库中是否有可复用的编码/模板/定理，输出报告供 planner 参考。
+The CR advisor is dispatched during the plan stage (see "CR infrastructure
+verification" below), checking the CR library for reusable
+encodings/templates/theorems and producing a report for the planner to
+consult.
 
-### 第 5 步：验证 CR 设施是否起效
+### Step 5: Verify whether the CR infrastructure took effect
 
-详见下文"CR 设施验证方案"。
+See "CR Infrastructure Verification Plan" below for details.
 
 ---
 
-## 项目结构
+## Project Structure
 
 ```
 reduction-test/
 |-- lakefile.lean              # require ComplexityReduction from "../ComplexityReduction"
 |-- lean-toolchain             # leanprover/lean4:v4.29.0
-|-- ReductionTest.lean         # 根模块 import
+|-- ReductionTest.lean         # root module import
 |-- ReductionTest/
-|   |-- DoubleSAT.lean         # SAT -> DOUBLE-SAT 归约
-|   |-- NAE3SAT.lean           # 3SAT -> NAE-3SAT 归约
-|   `-- IndependentSet.lean    # CLIQUE -> INDEPENDENT SET 归约
+|   |-- DoubleSAT.lean         # SAT -> DOUBLE-SAT reduction
+|   |-- NAE3SAT.lean           # 3SAT -> NAE-3SAT reduction
+|   `-- IndependentSet.lean    # CLIQUE -> INDEPENDENT SET reduction
 |-- blueprint/
 |   `-- src/
-|       |-- content.tex        # \input 各章节
+|       |-- content.tex        # \input of each chapter
 |       |-- chapters/
 |       |   |-- ReductionTest_DoubleSAT.tex
 |       |   |-- ReductionTest_NAE3SAT.tex
@@ -147,7 +155,7 @@ reduction-test/
 |       `-- macros/
 |           `-- common.tex
 |-- references/
-|   `-- ComplexityReduction.md # CR 库参考文档（从 archon-test 复制）
+|   `-- ComplexityReduction.md # CR library reference doc (copied from archon-test)
 |-- .archon/
 |   |-- config.json            # harness: codex, CR advisor enabled
 |   |-- subagents/
@@ -158,106 +166,110 @@ reduction-test/
 |   |-- AGENTS.md
 |   |-- PROGRESS.md
 |   `-- ...
-`-- scripts/                   # 临时脚本（按 AGENTS.md 约定）
+`-- scripts/                   # temp scripts (per AGENTS.md convention)
 ```
 
 ---
 
-## CR 设施验证方案
+## CR Infrastructure Verification Plan
 
-### 信号 1：dispatch.jsonl（最硬证据）
+### Signal 1: dispatch.jsonl (strongest evidence)
 
-每次子代理被调度时，`Subagent.run()` 会向
-`.archon/logs/iter-NNN/dispatch.jsonl` 追加 JSON 行：
+Each time a subagent is dispatched, `Subagent.run()` appends JSON lines to
+`.archon/logs/iter-NNN/dispatch.jsonl`:
 
 ```json
 {"event":"dispatch_start","role":"complexity-reduction-advisor","slug":"...","write_domain":[...]}
 {"event":"dispatch_end","role":"complexity-reduction-advisor","slug":"...","ok":true,"duration_s":42}
 ```
 
-检查方法：
+How to check:
 ```powershell
 Get-Content .archon\logs\iter-001\dispatch.jsonl |
   Where-Object { $_ -match "complexity-reduction-advisor" }
 ```
 
-如果这里有记录，说明 planner 确实派发了 CR advisor。
+If records appear here, the planner did dispatch the CR advisor.
 
-### 信号 2：task_results 报告（内容证据）
+### Signal 2: task_results report (content evidence)
 
-advisor 的实际输出在
-`.archon/task_results/complexity-reduction-advisor-<slug>.md`，
-包含 verdict（REUSE / PARTIAL / BUILD_NEW）和具体发现。
+The advisor's actual output lives in
+`.archon/task_results/complexity-reduction-advisor-<slug>.md`,
+containing the verdict (REUSE / PARTIAL / BUILD_NEW) and concrete findings.
 
-### 信号 3：advice 持久建议
+### Signal 3: persistent advice
 
-`.archon/advice/<slug>.md`，跨迭代持久，供后续迭代参考。
+`.archon/advice/<slug>.md`, persisted across iterations, for later iterations
+to consult.
 
-### 信号 4：mandatory 审计（强制保障）
+### Signal 4: mandatory audit (enforced safeguard)
 
-`complexity-reduction-advisor.md` 的 frontmatter 目前**没有** `mandatory` 字段，
-审计不会对它的缺席发出警告。
+The frontmatter of `complexity-reduction-advisor.md` currently does **not**
+have a `mandatory` field, so the audit will not warn about its absence.
 
-**建议改进**：给 advisor frontmatter 加上 `mandatory: ["plan"]`，
-这样 `check_mandatory_dispatched` 会在 `dashboard.log` 中打印警告，
-并要求 planner 在 `iter/iter-NNN/plan.md` 的 `## Subagent skips` 段落
-提供跳过理由。
+**Suggested improvement**: add `mandatory: ["plan"]` to the advisor
+frontmatter, so `check_mandatory_dispatched` prints a warning in
+`dashboard.log` and requires the planner to provide a skip reason in the
+`## Subagent skips` section of `iter/iter-NNN/plan.md`.
 
-### 信号 5：plan 侧车引用
+### Signal 5: plan-side references
 
-检查 `iter/iter-NNN/plan.md` 是否引用了 advisor 的发现。
+Check whether `iter/iter-NNN/plan.md` references the advisor's findings.
 
-### 实际验证流程
+### Actual Verification Procedure
 
-每次迭代后：
-1. 查 `dispatch.jsonl` -- 确认 advisor 被派发
-2. 查 `task_results/` -- 确认 advisor 输出了有意义的内容
-3. 查 `plan.md` -- 确认 planner 消费了 advisor 报告
-4. （可选）查 `prove` 的 `task_results` -- 确认 prover 使用了 CR 编码
+After each iteration:
+1. Check `dispatch.jsonl` -- confirm the advisor was dispatched
+2. Check `task_results/` -- confirm the advisor produced meaningful content
+3. Check `plan.md` -- confirm the planner consumed the advisor's report
+4. (Optional) check the `prove` `task_results` -- confirm the prover used CR
+   encodings
 
 ---
 
-## 从自然语言生成 Lean stub：能否交给 Archon？
+## Generating Lean stubs from natural language: can it be delegated to Archon?
 
-可以。Archon 的 `formalize` prover-mode 专门为此设计。
+Yes. Archon's `formalize` prover-mode is designed exactly for this.
 
-### formalize 模式工作流
+### formalize Mode Workflow
 
-1. 读 blueprint `.tex` 章节（含 `\lean{}` 标注）
-2. 为每个 `\begin{theorem}` / `\begin{lemma}` / `\begin{definition}` 块
-   生成带 `sorry` 的 Lean 声明
-3. 验证文件编译通过（所有 sorry 在位）
-4. 输出到 `task_results/<file>.md`
+1. Read blueprint `.tex` chapters (with `\lean{}` annotations)
+2. Generate Lean declarations with `sorry` for every `\begin{theorem}` /
+   `\begin{lemma}` / `\begin{definition}` block
+3. Verify the file compiles (all sorries in place)
+4. Output to `task_results/<file>.md`
 
-### 分工
+### Division of Labor
 
-| 步骤 | 谁做 | 产出 |
+| Step | Who | Output |
 |------|------|------|
-| 选题 + 写 blueprint .tex | 我们 | LaTeX 章节，含 `\lean{declName}` 标注 |
-| 生成 Lean sorry stub | Archon `formalize` 模式 | 编译通过的 `.lean` 文件 |
-| 填充证明 | Archon `prove` 模式 + CR advisor | 完整证明 |
+| Problem selection + writing blueprint .tex | Us | LaTeX chapters with `\lean{declName}` annotations |
+| Generating Lean sorry stubs | Archon `formalize` mode | `.lean` files that compile |
+| Filling in proofs | Archon `prove` mode + CR advisor | Complete proofs |
 
-### 前提条件
+### Prerequisites
 
-- blueprint 中的问题描述需要意识到 CR 库的类型体系
-  （`CostedReduction`、`EncodedDecisionProblem` 等）
-- `\lean{}` 标注需要给出声明名（由我们决定命名）
+- The problem descriptions in the blueprint need to be aware of the CR
+  library's type system (`CostedReduction`, `EncodedDecisionProblem`, etc.)
+- The `\lean{}` annotations need to give declaration names (naming decided by
+  us)
 
-### 额外资源
+### Additional Resources
 
-`lean-scaffolder` 子代理功能类似但由 planner 主动派发，
-会注入策略注释（`/- Planner strategy: ... -/`）。
-可作为补充。
+The `lean-scaffolder` subagent is similar in function but is dispatched
+proactively by the planner, injecting strategy comments
+(`/- Planner strategy: ... -/`).
+It can serve as a supplement.
 
 ---
 
-## 待办事项
+## To-Do Items
 
-- [ ] 创建 `reduction-test` 项目（lakefile.lean、ReductionTest.lean、lean-toolchain）
-- [ ] 写 3 道题的 blueprint .tex 章节
-- [ ] 配置 `.archon/`（config.json、subagents、prover-modes、AGENTS.md）
-- [ ] 复制 references/ComplexityReduction.md
-- [ ] 给 CR advisor frontmatter 加 `mandatory: ["plan"]`
-- [ ] 运行 `archon init .` 初始化项目状态
-- [ ] 运行 `archon loop .` 开始测试
-- [ ] 迭代后检查 CR 设施验证信号
+- [ ] Create the `reduction-test` project (lakefile.lean, ReductionTest.lean, lean-toolchain)
+- [ ] Write blueprint .tex chapters for the 3 problems
+- [ ] Configure `.archon/` (config.json, subagents, prover-modes, AGENTS.md)
+- [ ] Copy references/ComplexityReduction.md
+- [ ] Add `mandatory: ["plan"]` to the CR advisor frontmatter
+- [ ] Run `archon init .` to initialize project state
+- [ ] Run `archon loop .` to start testing
+- [ ] After iterations, check the CR infrastructure verification signals

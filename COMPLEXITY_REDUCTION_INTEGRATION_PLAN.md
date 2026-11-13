@@ -1,30 +1,30 @@
-# ComplexityReduction 与 Archon 适配计划
+# ComplexityReduction and Archon Adaptation Plan
 
-## 背景
+## Background
 
-目标是让 Archon 在需要 ComplexityReduction 库的形式化任务中，不只是依赖 agent 自行阅读源码，而是拥有明确的依赖识别、符号参考、证明模式和搜索手段。
+The goal is for Archon, in formalization tasks that need the ComplexityReduction library, to not merely rely on the agent reading the source code by itself, but to have explicit dependency detection, symbol references, proof modes, and search facilities.
 
-当前目录布局：
+The current directory layout:
 
-- `D:\code\Lean\Archon`：Archon 主源码。
-- `D:\code\Lean\archon-test`：现有 Archon 目标项目。
-- `D:\code\Lean\ComplexityReduction`：Lean 4 计算复杂度归约库。
+- `D:\code\Lean\Archon`: Archon main source code.
+- `D:\code\Lean\archon-test`: the existing Archon target project.
+- `D:\code\Lean\ComplexityReduction`: the Lean 4 computational complexity reduction library.
 
-`D:\code\Lean\scripts` 已由用户清空。它与 Archon 自身的
-`src/archon/.archon-src/scripts` 无关，不需要做任何迁移。
+`D:\code\Lean\scripts` has been emptied by the user. It is unrelated to Archon's own
+`src/archon/.archon-src/scripts`, and no migration is needed.
 
-## 关键约定
+## Key Conventions
 
-- ComplexityReduction 不复制进 Archon 仓库。
-- ComplexityReduction 不使用 Archon `peers` 机制，因为它不是 Archon 项目，而是 Lake 依赖库。
-- 目标项目与 ComplexityReduction 必须保持 `leanprover/lean4:v4.29.0`，mathlib 锁定 `v4.29.0`。
-- 所有落库内容默认拒绝 `sorry`，并通过 `#print axioms` 检查，避免引入 `sorryAx`。
+- ComplexityReduction is not copied into the Archon repository.
+- ComplexityReduction does not use the Archon `peers` mechanism, because it is not an Archon project but a Lake dependency library.
+- The target project and ComplexityReduction must both stay on `leanprover/lean4:v4.29.0`, with mathlib pinned to `v4.29.0`.
+- All content landing in the library rejects `sorry` by default and is checked via `#print axioms`, to avoid introducing `sorryAx`.
 
-## 阶段一：冻结并验证依赖边界
+## Phase 1: Freeze and Verify the Dependency Boundary
 
-1. 确认 ComplexityReduction 与目标项目的 lean-toolchain 一致。
-2. 确认 ComplexityReduction 与目标项目的 mathlib 版本一致。
-3. 在 ComplexityReduction 中维护一个稳定的 Archon 导入面，建议覆盖：
+1. Confirm that ComplexityReduction and the target project have the same lean-toolchain.
+2. Confirm that ComplexityReduction and the target project have the same mathlib version.
+3. Maintain a stable Archon import surface in ComplexityReduction; it is recommended to cover:
    - `Core`
    - `SAT`
    - `CSP`
@@ -33,127 +33,127 @@
    - `Bridges`
    - `Certificates`
    - `Targets`
-4. 验证：
+4. Verify:
    - `lake build complexityreduction`
-   - 最小冒烟文件 `#check` 关键公开符号
-   - 记录哪些 `Targets` 默认可用，哪些需要 explicit opt-in。
+   - a minimal smoke file that runs `#check` on the key public symbols
+   - recording which `Targets` are available by default and which need explicit opt-in.
 
-## 阶段二：Archon 源码侧改动
+## Phase 2: Changes on the Archon Source Side
 
-目标是把 ComplexityReduction 作为一等知识固化到 Archon 的打包数据中。
+The goal is to solidify ComplexityReduction into Archon's packaged data as first-class knowledge.
 
-### 2.1 增加库参考文档
+### 2.1 Add a Library Reference Document
 
-新增或维护：
+Add or maintain:
 
 ```text
 src/archon/.archon-src/skills/lean4/skills/lean4/references/complexity-reduction-library.md
 ```
 
-内容至少包含：
+The content must include at least:
 
-- 稳定导入面。
-- 核心定义和定理符号表。
-- `Targets` 目录中的可用目标与信任边界。
-- 外部 Schaefer bridge 的 explicit opt-in 规则。
-- 常见模板 `Templates` 的使用场景。
+- The stable import surface.
+- A symbol table of the core definitions and theorems.
+- The available targets in the `Targets` directory and their trust boundaries.
+- The explicit opt-in rules for the external Schaefer bridge.
+- The use cases of the common templates in `Templates`.
 
-### 2.2 增加 ComplexityReduction 构建模式
+### 2.2 Add a ComplexityReduction Build Mode
 
-新增：
+Add:
 
 ```text
 src/archon/.archon-src/prover-modes/complexity-reduction-build.md
 ```
 
-frontmatter 与现有 `mathlib-build.md` 保持一致，正文要求：
+Keep the frontmatter consistent with the existing `mathlib-build.md`; the body must require:
 
-- 先查 ComplexityReduction 是否已有对应定义和定理。
-- 优先通过归约、模板和 bridge 完成目标。
-- 每个新声明都必须编译通过且 axiom-clean。
-- 停止前必须给出下一次可继续的分解。
+- Checking first whether ComplexityReduction already has the corresponding definitions and theorems.
+- Prioritizing completing goals through reductions, templates, and bridges.
+- Every new declaration compiling successfully and being axiom-clean.
+- Providing a decomposition that can be continued next time before stopping.
 
-### 2.3 增加 ComplexityReduction 搜索脚本
+### 2.3 Add a ComplexityReduction Search Script
 
-新增：
+Add:
 
 ```text
 src/archon/.archon-src/skills/lean4/lib/scripts/search_complexity_reduction.sh
 ```
 
-功能参考 `search_mathlib.sh`，支持：
+Model the functionality on `search_mathlib.sh`, supporting:
 
-- `name`：按声明名搜索。
-- `type`：按类型签名搜索。
-- `content`：按文件内容搜索。
+- `name`: search by declaration name.
+- `type`: search by type signature.
+- `content`: search by file content.
 
-搜索根默认指向 ComplexityReduction 源码位置，并允许通过环境变量覆盖。
+The search root defaults to the ComplexityReduction source location and can be overridden via environment variables.
 
-### 2.4 扩展 Lake 依赖提示
+### 2.4 Extend Lake Dependency Hints
 
-当前 [lake.py](src/archon/commands/tooling/lake.py) 只通过 `has_mathlib: Bool` 记录 mathlib。
+Currently [lake.py](src/archon/commands/tooling/lake.py) records mathlib only through `has_mathlib: Bool`.
 
-建议分两步：
+A two-step approach is recommended:
 
-1. 先增加 `has_complexity_reduction` 或等价的 CR 专用识别。
-2. 后续再考虑泛化为 `declared_dependencies` 列表，统一支持自定义 Lean 依赖。
+1. First add `has_complexity_reduction` or an equivalent CR-specific detection.
+2. Later consider generalizing to a `declared_dependencies` list that uniformly supports custom Lean dependencies.
 
-同步更新：
+Also update:
 
-- `ProjectLayout` 与 `semantic_pass` 对依赖状态的展示。
-- `init` 或 `doctor` 中对版本不匹配和缺依赖的提示。
+- The dependency status display in `ProjectLayout` and `semantic_pass`.
+- The version-mismatch and missing-dependency hints in `init` or `doctor`.
 
-## 阶段三：目标项目侧接入
+## Phase 3: Integration on the Target Project Side
 
-以 `D:\code\Lean\archon-test` 为默认目标项目。
+Use `D:\code\Lean\archon-test` as the default target project.
 
-### 3.1 添加 Lake 本地依赖
+### 3.1 Add a Lake Local Dependency
 
-在目标项目 lakefile 中增加指向 `../ComplexityReduction` 的本地依赖，保持现有 mathlib 不变。
+Add a local dependency pointing to `../ComplexityReduction` in the target project's lakefile, keeping the existing mathlib unchanged.
 
-同步确认：
+Also confirm:
 
-- 工具链仍为 `v4.29.0`。
-- 本地依赖不会引起重复的 mathlib 解析。
+- The toolchain remains `v4.29.0`.
+- The local dependency does not cause duplicate mathlib resolution.
 
-### 3.2 导入 ComplexityReduction
+### 3.2 Import ComplexityReduction
 
-在目标项目的对应 Lean 文件中导入稳定的 CR 入口面，例如：
+In the corresponding Lean files of the target project, import the stable CR entry surface, for example:
 
 ```lean
 import ComplexityReduction.Targets
 ```
 
-如果需要更宽的符号面，再按需导入 `Core`、`SAT`、`CSP`、`Schaefer` 或 `Karp21`。
+If a wider symbol surface is required, import `Core`, `SAT`, `CSP`, `Schaefer`, or `Karp21` as needed.
 
-### 3.3 增加项目内参考文献
+### 3.3 Add an In-Project Reference Document
 
-新增：
+Add:
 
 ```text
 D:\code\Lean\archon-test\references\ComplexityReduction.md
 ```
 
-与 Archon 打包数据中的库参考保持一致，并记录目标项目当前需要的具体目标。
+Keep it consistent with the library reference in Archon's packaged data, and record the specific targets the target project currently needs.
 
-### 3.4 增加持久用户提示
+### 3.4 Add Persistent User Hints
 
-在目标项目的 `.archon/USER_HINTS.md` 持久区加入：
+Add the following to the persistent section of the target project's `.archon/USER_HINTS.md`:
 
-- 优先使用 ComplexityReduction 已有声明。
-- 新目标必须从 `Targets` 目录选择对应描述符。
-- 外部 Schaefer bridge 默认不用于本地推理，除非显式 opt-in。
-- 每个产物必须 axiom-clean，禁止 `sorry`。
+- Prefer existing ComplexityReduction declarations.
+- New goals must select the corresponding descriptor from the `Targets` directory.
+- The external Schaefer bridge is not used for local reasoning by default unless explicitly opted in.
+- Every artifact must be axiom-clean; `sorry` is forbidden.
 
-### 3.5 配置 ComplexityReduction 顾问子代理
+### 3.5 Configure a ComplexityReduction Advisor Subagent
 
-新增：
+Add:
 
 ```text
 D:\code\Lean\archon-test\.archon\subagents\complexity-reduction-advisor.md
 ```
 
-frontmatter 示例：
+Example frontmatter:
 
 ```yaml
 ---
@@ -164,27 +164,27 @@ mandatory: plan
 ---
 ```
 
-然后在 `.archon/config.json` 的 `subagents.enabled` 中加入：
+Then add to `subagents.enabled` in `.archon/config.json`:
 
 ```json
 "enabled": ["complexity-reduction-advisor"]
 ```
 
-如希望该项目每次计划阶段都使用它，可再将其加入 `_recommended_plan_phase`。
+If you want the project to use it in every planning phase, you can additionally add it to `_recommended_plan_phase`.
 
-## 验证清单
+## Verification Checklist
 
-1. `lake build complexityreduction` 通过。
-2. `lake build ArchonTest` 通过，确认本地依赖已解析。
-3. 冒烟文件可以 `#check` ComplexityReduction 关键符号。
-4. `archon init` 或 `archon doctor` 能发现新打包数据。
-5. `.archon/prover-modes/complexity-reduction-build.md` 被复制到目标项目。
-6. `complexity-reduction-advisor` 被 Registry 正常加载。
-7. 在 `PROGRESS.md` 放一个最小目标，用 `complexity-reduction-build` 模式跑一轮 `archon loop`。
-8. 最终对新增声明执行 `#print axioms`，确认无 `sorryAx`。
+1. `lake build complexityreduction` passes.
+2. `lake build ArchonTest` passes, confirming the local dependency is resolved.
+3. The smoke file can `#check` the key ComplexityReduction symbols.
+4. `archon init` or `archon doctor` discovers the new packaged data.
+5. `.archon/prover-modes/complexity-reduction-build.md` is copied into the target project.
+6. `complexity-reduction-advisor` is loaded normally by the Registry.
+7. Put a minimal goal in `PROGRESS.md` and run one round of `archon loop` in the `complexity-reduction-build` mode.
+8. Finally run `#print axioms` on the newly added declarations to confirm there is no `sorryAx`.
 
-## 暂不执行的事项
+## Items Deferred for Now
 
-- 不把 ComplexityReduction 源码复制进 Archon。
-- 不把 ComplexityReduction 注册为 Archon peer。
-- 不在第一轮就做完整的通用依赖配置系统，CR 专用识别足够后再逐步泛化。
+- Do not copy the ComplexityReduction source into Archon.
+- Do not register ComplexityReduction as an Archon peer.
+- Do not build the complete generic dependency configuration system in the first round; generalize step by step once CR-specific detection is sufficient.
