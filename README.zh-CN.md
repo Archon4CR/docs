@@ -20,5 +20,5 @@
 - [ComplexityReduction](https://github.com/Archon4CR/ComplexityReduction) — Lean 4 计算复杂度归约库，提供 NPC 归约的形式化基础设施（EncodedDecisionProblem、CostedReduction、Karp21、Schaefer 等）；**由实验室师兄开发**
 - [Archon](https://github.com/Archon4CR/Archon/tree/complexity-reduction-integration) — Python 实现的自动定理证明框架，驱动 Lean 形式化证明的迭代工作流（blueprint -> formalize -> prove -> polish）；**针对本项目做了适配修改的 fork**（上游 frenzymath/Archon）
 - [problems](https://github.com/Archon4CR/problems) — NP 完全性归约题库，从大学课程资料中提取并清洗的 64 道归约题；**完全由本项目作者整理**
-- [reduction-test](https://github.com/Archon4CR/test) — 归约证明测试项目，包含 3 道题的完整 Lean 证明和 CR advisor 报告；**由本项目作者**基于 Archon + ComplexityReduction 构建
+- [reduction-test](https://github.com/Archon4CR/reduction-test) — 归约证明测试项目，包含 3 道题的完整 Lean 证明和 CR advisor 报告；**由本项目作者**基于 Archon + ComplexityReduction 构建
 - [docs](https://github.com/Archon4CR/docs) — 本仓库，项目文档
